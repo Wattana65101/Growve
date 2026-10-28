@@ -1,121 +1,125 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Newspaper, ChevronRight, Clock, Flame } from 'lucide-react';
+import { Clock, Flame } from 'lucide-react';
+import { StockGrowth } from '@/lib/api';
 
-interface NewsItem {
-  id: string;
-  title: string;
-  source: string;
-  category: string;
-  hoursAgo: number;
-  impact: 'positive' | 'neutral' | 'negative';
+interface NewsCarouselProps {
+  stocks?: StockGrowth[];
 }
 
-const newsList: NewsItem[] = [
-  {
-    id: '1',
-    title: 'Fed ส่งสัญญาณตรึงหรือลดดอกเบี้ยต่อเนื่อง หนุนสินทรัพย์เสี่ยงและหุ้นเทคโนโลยีพุ่งแรง',
-    source: 'Bloomberg',
-    category: 'นโยบายการเงิน',
-    hoursAgo: 1,
-    impact: 'positive'
-  },
-  {
-    id: '2',
-    title: 'NVIDIA เปิดตัวชิปรุ่นใหม่สำหรับ Data Center ยอดสั่งจองทะลุเป้า หนุน Sentiment AI ทั่วโลก',
-    source: 'Reuters',
-    category: 'หุ้นเทคฯ',
-    hoursAgo: 2,
-    impact: 'positive'
-  },
-  {
-    id: '3',
-    title: 'ราคาทองคำทำสถิติสูงสุดใหม่ (All-Time High) รับแรงซื้อสินทรัพย์ปลอดภัยจากความตึงเครียดภูมิรัฐศาสตร์',
-    source: 'CNBC',
-    category: 'ทองคำ/สินค้าโภคภัณฑ์',
-    hoursAgo: 4,
-    impact: 'positive'
-  },
-  {
-    id: '4',
-    title: 'Bitcoin พักฐานแถว $67,000 นักวิเคราะห์ชี้เป็นจังหวะสะสมก่อนรอบ Halving Cycle ถัดไป',
-    source: 'CoinDesk',
-    category: 'คริปโต',
-    hoursAgo: 5,
-    impact: 'neutral'
-  },
-  {
-    id: '5',
-    title: 'กระแสเงินทุนไหลเข้ากองทุนดัชนี Tech ETF สหรัฐฯ พุ่งแตะระดับสูงสุดในรอบ 6 เดือน',
-    source: 'Financial Times',
-    category: 'กองทุนรวม',
-    hoursAgo: 7,
-    impact: 'positive'
-  }
-];
+interface CompactNewsItem {
+  headlineTh: string;
+  author: string;
+  timeText: string;
+  readTime: string;
+  source: string;
+  url: string;
+}
 
-export const NewsCarousel = () => {
+export const NewsCarousel: React.FC<NewsCarouselProps> = ({ stocks = [] }) => {
+  // ข่าวภาษาไทยรูปแบบกะทัดรัด พร้อมชื่อผู้เขียน วันที่ เวลา และระยะเวลาอ่าน
+  const newsList: CompactNewsItem[] = [
+    {
+      headlineTh: 'Alphabet และ Microsoft เตรียมรายงานผลประกอบการ; การตัดสินใจของเฟดกำลังจะเกิดขึ้น - อะไรบ้างที่ส่งผลต่อตลาด',
+      author: 'สกอตต์ คาโนว์สกี',
+      timeText: 'วันพุธที่ 28 ตุลาคม 2569 เวลา 16:17 น. GMT+7',
+      readTime: 'ใช้เวลาอ่าน 6 นาที',
+      source: 'Yahoo Finance',
+      url: 'https://finance.yahoo.com',
+    },
+    {
+      headlineTh: 'NVIDIA เปิดตัวสถาปัตยกรรมชิป AI รุ่นใหม่ ยอดจองล่วงหน้าทะลุเป้า หนุนกลุ่มเซมิคอนดักเตอร์พุ่งแรง',
+      author: 'เดวิด รอยเตอร์',
+      timeText: 'วันพุธที่ 28 ตุลาคม 2569 เวลา 15:30 น. GMT+7',
+      readTime: 'ใช้เวลาอ่าน 4 นาที',
+      source: 'Reuters',
+      url: 'https://reuters.com',
+    },
+    {
+      headlineTh: 'Tesla ขยายบริการ Robotaxi ไร้คนขับเชิงพาณิชย์สู่เมืองใหญ่ รับกระแสตลาด AI Mobility',
+      author: 'เจมส์ มิลเลอร์',
+      timeText: 'วันพุธที่ 28 ตุลาคม 2569 เวลา 14:00 น. GMT+7',
+      readTime: 'ใช้เวลาอ่าน 5 นาที',
+      source: 'Bloomberg',
+      url: 'https://bloomberg.com',
+    },
+    {
+      headlineTh: 'ราคาทองคำทำสถิติสูงสุดใหม่ (All-Time High) รับแรงซื้อสินทรัพย์ปลอดภัยจากความตึงเครียดภูมิรัฐศาสตร์',
+      author: 'ไมเคิล บราวน์',
+      timeText: 'วันพุธที่ 28 ตุลาคม 2569 เวลา 12:45 น. GMT+7',
+      readTime: 'ใช้เวลาอ่าน 3 นาที',
+      source: 'CNBC',
+      url: 'https://cnbc.com',
+    },
+  ];
+
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // เลื่อนอัตโนมัติทุก 4 วินาที
+  // เลื่อนอัตโนมัติทุก 4.5 วินาที
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % newsList.length);
     }, 4500);
     return () => clearInterval(timer);
-  }, []);
+  }, [newsList.length]);
 
   const current = newsList[currentIndex];
 
   return (
-    <div className="w-full bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-2xl p-3.5 sm:p-4 my-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* หัวข้อ Badge ข่าวฮิต */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500 text-white text-xs font-bold shadow-xs">
+    <div className="w-full bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-2xl p-3 sm:p-3.5 my-6 transition-all">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        
+        {/* ฝั่งซ้าย: ป้ายข่าวฮิต + หัวข้อข่าวแปลไทยเต็มๆ */}
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500 text-white text-xs font-bold shadow-xs shrink-0">
             <Flame className="w-3.5 h-3.5 animate-bounce" />
-            <span>ข่าวฮิตเกาะกระแส</span>
+            <span>ข่าวฮิต</span>
           </div>
-          <span className="text-xs text-slate-400">เลื่อนอัตโนมัติ</span>
+
+          <a
+            href={current.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={current.headlineTh}
+            className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100 truncate hover:text-emerald-500 transition-colors cursor-pointer"
+          >
+            {current.headlineTh}
+          </a>
         </div>
 
-        {/* เนื้อหาข่าวที่เลื่อนได้ */}
-        <div className="flex-1 overflow-hidden">
-          <div className="flex items-center gap-2 transition-all duration-500 ease-in-out">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
-              {current.category}
-            </span>
-            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate hover:text-emerald-500 transition-colors cursor-pointer">
-              {current.title}
-            </p>
-          </div>
-        </div>
-
-        {/* ข้อมูลเวลา & แหล่งข่าว */}
-        <div className="flex items-center gap-3 shrink-0 text-xs text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>{current.hoursAgo} ชั่วโมงที่แล้ว</span>
-          </div>
-          <span className="text-slate-300 dark:text-slate-700">•</span>
-          <span className="font-medium text-slate-700 dark:text-slate-300">{current.source}</span>
+        {/* ฝั่งขวา: ผู้เขียน • เวลา • ระยะเวลาอ่าน • แหล่งข่าว (เลื่อนตามอัตโนมัติ) */}
+        <div className="flex items-center gap-2.5 shrink-0 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 pl-1 sm:pl-0">
+          <span className="font-medium text-slate-700 dark:text-slate-300 hidden md:inline">
+            {current.author}
+          </span>
+          <span className="text-slate-300 dark:text-slate-700 hidden md:inline">•</span>
           
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-slate-400" />
+            <span>{current.readTime}</span>
+          </div>
+
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+            {current.source}
+          </span>
+
           {/* จุด pagination เล็กๆ */}
-          <div className="hidden md:flex items-center gap-1 ml-2">
+          <div className="hidden lg:flex items-center gap-1 ml-1">
             {newsList.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  idx === currentIndex ? 'w-4 bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                  idx === currentIndex ? 'w-4 bg-emerald-500' : 'w-1.5 bg-slate-300 dark:bg-slate-700'
                 }`}
               />
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );
 };
-
