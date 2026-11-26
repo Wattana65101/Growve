@@ -105,10 +105,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ### 3. รันโปรเจกต์ในโหมดพัฒนา
 ```bash
 npm run dev
-```
-เปิดบราวเซอร์ไปที่ [http://localhost:3000](http://localhost:3000)
 
----
 
 ## 🌟 จุดเด่นและทักษะที่นำเสนอใน Portfolio (Portfolio Highlights)
 
