@@ -125,6 +125,41 @@ export async function getGrowthStocks(symbols?: string[]): Promise<StockGrowth[]
 }
 
 // ============================================================
+// Historical Price Data – ข้อมูลราคาย้อนหลัง
+// ============================================================
+export type TimeRange = '1D' | '1W' | '1M' | '3M' | '1Y' | '5Y';
+export type Interval = '1m' | '5m' | '15m' | '30m' | '1h' | '1d';
+
+export interface HistoricalPoint {
+  date: string;      // daily: "2026-11-25", intraday: "2026-11-25T14:30:00"
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
+export async function getStockHistory(
+  symbol: string,
+  range: TimeRange = '1M',
+  interval?: Interval
+): Promise<HistoricalPoint[]> {
+  const params = new URLSearchParams({ range });
+  if (interval) params.append('interval', interval);
+
+  const res = await fetch(
+    `${API_BASE}/stocks/${encodeURIComponent(symbol)}/history?${params.toString()}`,
+    { headers: getHeaders() }
+  );
+  if (!res.ok) throw new Error(`Failed to fetch history for ${symbol}: ${res.status}`);
+  const data = await res.json();
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  if (data && Array.isArray(data.prices)) return data.prices;
+  return [];
+}
+
+// ============================================================
 // Stock Detail – รายละเอียดหุ้นเดี่ยว
 // ============================================================
 export async function getStockDetail(symbol: string): Promise<StockDetail> {
@@ -133,4 +168,92 @@ export async function getStockDetail(symbol: string): Promise<StockDetail> {
   });
   if (!res.ok) throw new Error(`Failed to fetch stock ${symbol}: ${res.status}`);
   return res.json();
+}
+
+// ============================================================
+// AI Chat – ระบบแชท AI อัจฉริยะ (SSE Stream & History)
+// ============================================================
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export async function getChatHistory(sessionId: string): Promise<ChatMessage[]> {
+  try {
+    const res = await fetch(`${API_BASE}/chat/history/${encodeURIComponent(sessionId)}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.messages || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function clearChatHistory(sessionId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/chat/history/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function streamChat(
+  sessionId: string,
+  message: string,
+  onChunk: (chunk: string) => void,
+  onDone: () => void,
+  onError: (err: any) => void
+): Promise<void> {
+  try {
+    const res = await fetch(`${API_BASE}/chat/stream`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ session_id: sessionId, message }),
+    });
+
+    if (!res.ok || !res.body) {
+      throw new Error(`Chat stream request failed: ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith(':')) continue;
+        if (trimmed.startsWith('data: ')) {
+          const raw = trimmed.replace('data: ', '');
+          if (raw === '[DONE]') {
+            onDone();
+            return;
+          }
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.text) onChunk(parsed.text);
+            else if (parsed.content) onChunk(parsed.content);
+            else if (typeof parsed === 'string') onChunk(parsed);
+          } catch {
+            onChunk(raw);
+          }
+        }
+      }
+    }
+    onDone();
+  } catch (err) {
+    onError(err);
+  }
 }

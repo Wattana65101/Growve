@@ -3,7 +3,7 @@
 import React from 'react';
 import { X, ArrowUpRight, ArrowDownRight, TrendingUp, BarChart3, DollarSign, Calendar, Activity, Users, ExternalLink, Newspaper, Image as ImageIcon } from 'lucide-react';
 import { StockDetail } from '@/lib/api';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { StockChart } from '@/components/StockChart';
 
 interface StockDetailModalProps {
   stock: StockDetail | null;
@@ -27,7 +27,6 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ stock, isLoa
   const rawTarget = stock?.target_price ?? stock?.price_target;
   const targetText = rawTarget ? (typeof rawTarget === 'number' ? `$${rawTarget.toLocaleString()}` : String(rawTarget)) : '-';
 
-  const trendData = stock?.trend_data || stock?.trend_history || [];
   const newsList = stock?.news || [];
 
   return (
@@ -69,25 +68,10 @@ export const StockDetailModal: React.FC<StockDetailModalProps> = ({ stock, isLoa
               </div>
             </div>
 
-            {/* Sparkline Chart */}
-            {trendData.length > 0 && (
-              <div className="px-5 h-40 mb-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="detailGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={isUp ? "#10B981" : "#F43F5E"} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={isUp ? "#10B981" : "#F43F5E"} stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                    <YAxis hide domain={['dataMin', 'dataMax']} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="value" stroke={isUp ? "#10B981" : "#F43F5E"} strokeWidth={2} fill="url(#detailGrad)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            {/* Interactive Historical Chart */}
+            <div className="px-5 mb-4">
+              <StockChart symbol={symbol} currentPrice={rawPrice} />
+            </div>
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 gap-3 px-5 pb-5">
